@@ -59,7 +59,18 @@ src/main/kotlin/ru/misis/booking/
 ├── RestaurantBookingApplication.kt
 ├── controller/          # REST-контроллеры
 ├── service/             # Бизнес-логика
-├── repository/          # JPA-репозитории
+├── uow/                 # Unit of Work (IUnitOfWork, JpaUnitOfWork)
+├── repository/
+│   ├── BookingRepository.kt     # Доменный интерфейс — используется сервисами/UoW
+│   ├── RestaurantRepository.kt  # Доменный интерфейс
+│   ├── UserRepository.kt        # Доменный интерфейс
+│   └── jpa/
+│       ├── JpaBookingRepository.kt      # Spring Data JPA (инфраструктура)
+│       ├── JpaRestaurantRepository.kt   # Spring Data JPA
+│       ├── JpaUserRepository.kt         # Spring Data JPA
+│       ├── BookingRepositoryAdapter.kt  # Адаптер: JPA → доменный интерфейс
+│       ├── RestaurantRepositoryAdapter.kt
+│       └── UserRepositoryAdapter.kt
 ├── dto/                 # Request/Response объекты
 ├── domain/
 │   ├── model/           # JPA-сущности (User, Restaurant, Booking, ...)
@@ -68,10 +79,37 @@ src/main/kotlin/ru/misis/booking/
 └── exception/           # GlobalExceptionHandler
 ```
 
+### Зачем два уровня в `repository/`
+
+Сервисы и UoW зависят только от **доменных интерфейсов** (`BookingRepository` и т.д.) — они ничего не знают о Spring Data или JPA. Это позволяет тестировать их с моками без поднятия контекста Spring.
+
+Всё, что связано с JPA, изолировано в `repository/jpa/`:
+- `Jpa*Repository` — Spring Data интерфейсы (автоматически реализуются Spring)
+- `*RepositoryAdapter` — тонкая обёртка, которая переводит Spring Data API в доменный интерфейс
+
+## Транзакции (Unit of Work)
+
+Все операции записи выполняются через `IUnitOfWork`:
+
+- `uow.execute { }` — транзакция с возможностью записи; при исключении — полный откат
+- `uow.executeReadOnly { }` — read-only транзакция
+
+```kotlin
+uow.execute {
+    val user = users.findById(id) ?: throw EntityNotFoundException(...)
+    user.updateProfile(newEmail, newPhone)
+    users.save(user)
+}
+```
+
 ## Тесты
 
 ```bash
 ./gradlew test
 ```
 
-Покрыты юнит-тестами: доменная модель (`Booking`, `Payment`, `PreOrder`, `Review`, ...) и сервисы (`BookingService`, `ReservationService`, `RestaurantService`, `UserService`).
+| Слой | Что покрыто |
+|------|-------------|
+| Доменная модель | `Booking`, `Payment`, `PreOrder`, `Review`, `LoyaltyAccount`, `RestaurantTable`, `User` |
+| Сервисы | `BookingService`, `ReservationService`, `RestaurantService`, `UserService` |
+| UoW / транзакции | `JpaUnitOfWorkTest` — коммит, откат, атомарность, каскадный откат |

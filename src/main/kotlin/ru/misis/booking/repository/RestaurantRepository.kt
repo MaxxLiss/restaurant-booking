@@ -1,6 +1,9 @@
 package ru.misis.booking.repository
 
-import org.springframework.data.jpa.repository.JpaRepository
 import ru.misis.booking.domain.model.Restaurant
 
-interface RestaurantRepository : JpaRepository<Restaurant, Long>
+interface RestaurantRepository {
+    fun findById(id: Long): Restaurant?
+    fun findAll(): List<Restaurant>
+    fun save(restaurant: Restaurant): Restaurant
+}
