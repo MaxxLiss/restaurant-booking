@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: restaurant-booking
+  # Когда понадобится БД — раскомментировать и добавить драйвер в build.gradle.kts
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/booking
+  #   username: booking
+  #   password: booking
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: update
+  #   properties:
+  #     hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  #     hibernate.format_sql: true
