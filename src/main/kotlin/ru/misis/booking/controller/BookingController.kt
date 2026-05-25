@@ -6,27 +6,26 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import ru.misis.booking.dto.*
-import ru.misis.booking.service.ReservationService
+import ru.misis.booking.service.BookingService
 
 @Tag(name = "Bookings", description = "Бронирование столиков, предзаказы и оплата")
 @RestController
 @RequestMapping("/api/bookings")
-class BookingController(private val reservationService: ReservationService) {
-
+class BookingController(private val bookingService: BookingService) {
     @Operation(summary = "Создать бронирование")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody request: CreateBookingRequest): CreateBookingResponse =
-        reservationService.createBooking(request)
+        bookingService.createBooking(request)
 
     @Operation(summary = "Детали бронирования")
     @GetMapping("/{id}")
-    fun getOne(@PathVariable id: Long): BookingDetailsResponse = reservationService.getBooking(id)
+    fun getOne(@PathVariable id: Long): BookingDetailsResponse = bookingService.getBooking(id)
 
     @Operation(summary = "Отменить бронирование")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun cancel(@PathVariable id: Long) = reservationService.cancelBooking(id)
+    fun cancel(@PathVariable id: Long) = bookingService.cancelBooking(id)
 
     @Operation(summary = "Добавить позиции предзаказа")
     @PostMapping("/{id}/pre-order")
@@ -34,7 +33,7 @@ class BookingController(private val reservationService: ReservationService) {
     fun addPreOrder(
         @PathVariable id: Long,
         @Valid @RequestBody items: List<AddPreOrderItemRequest>
-    ): PreOrderResponse = reservationService.addPreOrderItems(id, items)
+    ): PreOrderResponse = bookingService.addPreOrderItems(id, items)
 
     @Operation(summary = "Оплатить бронирование")
     @PostMapping("/{id}/payment")
@@ -42,5 +41,5 @@ class BookingController(private val reservationService: ReservationService) {
     fun pay(
         @PathVariable id: Long,
         @Valid @RequestBody request: CreatePaymentRequest
-    ): PaymentResponse = reservationService.processPayment(id, request)
+    ): PaymentResponse = bookingService.processPayment(id, request)
 }

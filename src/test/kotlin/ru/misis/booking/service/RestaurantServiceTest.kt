@@ -21,7 +21,6 @@ import java.time.LocalDateTime
 
 @ExtendWith(MockitoExtension::class)
 class RestaurantServiceTest {
-
     @Mock lateinit var restaurantRepo: RestaurantRepository
     @Mock lateinit var userRepo: UserRepository
     @Mock lateinit var bookingRepo: BookingRepository

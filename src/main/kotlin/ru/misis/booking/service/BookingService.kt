@@ -1,45 +1,74 @@
 package ru.misis.booking.service
 
-import ru.misis.booking.domain.exceptions.BusinessRuleViolationException
-import ru.misis.booking.domain.model.*
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
+import ru.misis.booking.domain.exceptions.EntityNotFoundException
+import ru.misis.booking.domain.exceptions.InvalidArgumentException
+import ru.misis.booking.domain.model.Booking
+import ru.misis.booking.domain.model.Payment
+import ru.misis.booking.domain.model.PreOrder
+import ru.misis.booking.dto.*
+import ru.misis.booking.uow.IUnitOfWork
 
 @Service
-class BookingService {
-    fun createBooking(
-        user: User,
-        restaurant: Restaurant,
-        tableId: Long,
-        startAt: LocalDateTime,
-        endAt: LocalDateTime,
-        guests: Int
-    ): Booking {
-        val table = restaurant.findTable(tableId)
-            ?: throw BusinessRuleViolationException("Столик $tableId не найден в ресторане")
-        return Booking(user = user, table = table, startAt = startAt, endAt = endAt, guests = guests)
-    }
+class BookingService(
+    private val uow: IUnitOfWork
+) {
+    fun createBooking(request: CreateBookingRequest): CreateBookingResponse =
+        uow.execute {
+            val user = users.findById(request.userId)
+                ?: throw EntityNotFoundException("Пользователь ${request.userId} не найден")
+            val restaurant = restaurants.findById(request.restaurantId)
+                ?: throw EntityNotFoundException("Ресторан ${request.restaurantId} не найден")
+            val table = restaurant.findTable(request.tableId)
+                ?: throw EntityNotFoundException("Столик ${request.tableId} не найден в ресторане ${request.restaurantId}")
 
-    fun startPreOrder(booking: Booking): PreOrder {
-        booking.preOrder?.let { return it }
-        val preOrder = PreOrder()
-        booking.attachPreOrder(preOrder)
-        return preOrder
-    }
+            val booking = Booking(user, table, request.startAt, request.endAt, request.guests)
+            CreateBookingResponse.from(bookings.save(booking))
+        }
 
-    fun payAndAccrueBonus(
-        booking: Booking,
-        method: String,
-        loyaltyAccount: LoyaltyAccount
-    ): Payment {
-        val preOrder = booking.preOrder
-            ?: throw BusinessRuleViolationException("Нельзя оплатить бронь без предзаказа")
-        preOrder.ensureNotEmpty()
-        val total = booking.calculateTotal()
-        val payment = Payment(amount = total, method = method)
-        booking.attachPayment(payment)
-        payment.process()
-        loyaltyAccount.addBonus(total)
-        return payment
-    }
+    fun getBooking(id: Long): BookingDetailsResponse =
+        uow.executeReadOnly {
+            BookingDetailsResponse.from(findOrThrow(id))
+        }
+
+    fun cancelBooking(id: Long): Unit =
+        uow.execute {
+            val booking = findOrThrow(id)
+            booking.cancel()
+            bookings.save(booking)
+        }
+
+    fun addPreOrderItems(bookingId: Long, items: List<AddPreOrderItemRequest>): PreOrderResponse =
+        uow.execute {
+            val booking = findOrThrow(bookingId)
+            val restaurant = booking.table.restaurant
+                ?: throw InvalidArgumentException("Столик не привязан к ресторану")
+
+            if (booking.preOrder == null) booking.preOrder = PreOrder()
+            items.forEach { req ->
+                val dish = restaurant.menu.findDish(req.dishId)
+                    ?: throw EntityNotFoundException("Блюдо ${req.dishId} не найдено в меню")
+                booking.preOrder!!.addItem(dish, req.count)
+            }
+
+            bookings.save(booking)
+            PreOrderResponse.from(booking.preOrder!!)
+        }
+
+    fun processPayment(bookingId: Long, request: CreatePaymentRequest): PaymentResponse =
+        uow.execute {
+            val booking = findOrThrow(bookingId)
+            val total = booking.calculateTotal()
+            val payment = Payment.create(total, request.method)
+            payment.process()
+            booking.attachPayment(payment)
+            val loyaltyAccount = booking.user.getOrCreateLoyaltyAccount()
+            val bonusAccrued = loyaltyAccount.addBonus(total)
+            users.save(booking.user)
+            bookings.save(booking)
+            PaymentResponse.from(payment, bonusAccrued)
+        }
+
+    private fun IUnitOfWork.findOrThrow(id: Long): Booking =
+        bookings.findById(id) ?: throw EntityNotFoundException("Бронирование $id не найдено")
 }

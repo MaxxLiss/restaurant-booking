@@ -24,9 +24,19 @@ class User(
     @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
     private val _bookings: MutableList<Booking> = mutableListOf()
 
+    @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    private var _loyaltyAccount: LoyaltyAccount? = null
+
+    val loyaltyAccount: LoyaltyAccount? get() = _loyaltyAccount
+
+    fun getOrCreateLoyaltyAccount(): LoyaltyAccount {
+        if (_loyaltyAccount == null) _loyaltyAccount = LoyaltyAccount(user = this)
+        return _loyaltyAccount!!
+    }
+
     init {
         require(EMAIL_REGEX.matches(email)) { "Некорректный email" }
-        require(PHONE_REGEX.matches(phone)) { "Некорректный номер телефона (ожидается формат +7XXXXXXXXXX)" }
+        require(PHONE_REGEX.matches(phone)) { "Некорректный номер телефона" }
         require(passwordHash.isNotBlank()) { "passwordHash не может быть пустым" }
     }
 
@@ -51,7 +61,6 @@ class User(
 
     companion object {
         private val EMAIL_REGEX = Regex("^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$")
-        // E.164: + и от 7 до 15 цифр
         private val PHONE_REGEX = Regex("^\\+\\d{7,15}$")
     }
 }

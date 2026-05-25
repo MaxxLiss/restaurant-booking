@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class RestaurantBookingApplication
 
 fun main(args: Array<String>) {
-    runApplication<ru.misis.booking.RestaurantBookingApplication>(*args)
+    runApplication<RestaurantBookingApplication>(*args)
 }

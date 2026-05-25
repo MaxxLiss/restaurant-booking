@@ -12,7 +12,6 @@ import ru.misis.booking.service.UserService
 @RestController
 @RequestMapping("/api/users")
 class UserController(private val userService: UserService) {
-
     @Operation(summary = "Зарегистрировать пользователя")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)

@@ -8,8 +8,6 @@ import ru.misis.booking.domain.model.User
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-// ── Requests ─────────────────────────────────────────────────────────────────
-
 data class RegisterUserRequest(
     @field:NotBlank val email: String,
     @field:NotBlank val phone: String,
@@ -21,24 +19,18 @@ data class UpdateProfileRequest(
     val phone: String? = null
 )
 
-// ── Responses ─────────────────────────────────────────────────────────────────
-
-// POST /users/register  (role omitted — always CLIENT on creation)
 data class RegisterResponse(val userId: Long, val email: String, val phone: String) {
     companion object { fun from(u: User) = RegisterResponse(u.userId, u.email, u.phone) }
 }
 
-// GET /users/{id}
 data class UserProfileResponse(val userId: Long, val email: String, val phone: String, val role: Role) {
     companion object { fun from(u: User) = UserProfileResponse(u.userId, u.email, u.phone, u.role) }
 }
 
-// PATCH /users/{id}  (role omitted — cannot be changed via this endpoint)
 data class UpdateProfileResponse(val userId: Long, val email: String, val phone: String) {
     companion object { fun from(u: User) = UpdateProfileResponse(u.userId, u.email, u.phone) }
 }
 
-// GET /users/{id}/bookings  (summary row — no nested pre-order/payment)
 data class BookingSummaryResponse(
     val bookingId: Long,
     val startAt: LocalDateTime,

@@ -10,7 +10,9 @@ import ru.misis.booking.uow.IUnitOfWork
 import java.time.LocalDateTime
 
 @Service
-class RestaurantService(private val uow: IUnitOfWork) {
+class RestaurantService(
+    private val uow: IUnitOfWork
+) {
 
     fun createRestaurant(request: CreateRestaurantRequest): CreateRestaurantResponse =
         uow.execute {

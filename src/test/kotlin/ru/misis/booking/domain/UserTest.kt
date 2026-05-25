@@ -4,6 +4,8 @@ import ru.misis.booking.domain.enums.Role
 import ru.misis.booking.domain.model.User
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
 class UserTest {
 
@@ -38,5 +40,22 @@ class UserTest {
         val client = User("c@mail.com", "+79000000004", "hash", Role.CLIENT)
         assert(admin.isAdmin())
         assert(!client.isAdmin())
+    }
+
+    // --- Singleton ---
+
+    @Test
+    fun `getOrCreateLoyaltyAccount returns non-null account`() {
+        val user = User("u@mail.com", "+79000000000", "hash")
+        val account = user.getOrCreateLoyaltyAccount()
+        assertNotNull(account)
+    }
+
+    @Test
+    fun `getOrCreateLoyaltyAccount returns same instance on repeated calls`() {
+        val user = User("u@mail.com", "+79000000000", "hash")
+        val first = user.getOrCreateLoyaltyAccount()
+        val second = user.getOrCreateLoyaltyAccount()
+        assertSame(first, second)
     }
 }

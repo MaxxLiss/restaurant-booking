@@ -9,7 +9,9 @@ import java.time.LocalDateTime
 // Переходы: PENDING → PAID → REFUNDED, либо PENDING → FAILED
 @Entity
 @Table(name = "payments")
-class Payment(
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "payment_type", discriminatorType = DiscriminatorType.STRING)
+abstract class Payment(
     @Column(nullable = false, precision = 12, scale = 2)
     val amount: BigDecimal,
     @Column(nullable = false)
@@ -29,13 +31,7 @@ class Payment(
         require(method.isNotBlank()) { "Метод оплаты обязателен" }
     }
 
-    fun process(): Boolean {
-        if (status != PaymentStatus.PENDING)
-            throw BusinessRuleViolationException("Платёж уже обработан (статус $status)")
-        status = PaymentStatus.PAID
-        paidAt = LocalDateTime.now()
-        return true
-    }
+    abstract fun process(): Boolean
 
     fun fail() {
         if (status != PaymentStatus.PENDING)
@@ -49,4 +45,39 @@ class Payment(
         status = PaymentStatus.REFUNDED
         return true
     }
+
+    companion object {
+        fun create(amount: BigDecimal, method: String): Payment = when (method.uppercase()) {
+            "CARD", "ONLINE" -> CardPayment(amount, method)
+            "CASH"           -> CashPayment(amount, method)
+            else -> throw IllegalArgumentException("Неизвестный метод оплаты: $method")
+        }
+    }
+}
+
+@Entity
+@DiscriminatorValue("CARD")
+class CardPayment(amount: BigDecimal, method: String) : Payment(amount, method) {
+    override fun process(): Boolean {
+        if (status != PaymentStatus.PENDING)
+            throw BusinessRuleViolationException("Платёж уже обработан (статус $status)")
+        status = PaymentStatus.PAID
+        paidAt = LocalDateTime.now()
+        return true
+    }
+}
+
+@Entity
+@DiscriminatorValue("CASH")
+class CashPayment(amount: BigDecimal, method: String) : Payment(amount, method) {
+    override fun process(): Boolean {
+        if (status != PaymentStatus.PENDING)
+            throw BusinessRuleViolationException("Платёж уже обработан (статус $status)")
+        status = PaymentStatus.PAID
+        paidAt = LocalDateTime.now()
+        return true
+    }
+
+    override fun refund(): Boolean =
+        throw BusinessRuleViolationException("Возврат наличных выполняется вручную вне системы")
 }

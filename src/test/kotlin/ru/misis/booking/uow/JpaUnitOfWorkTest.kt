@@ -15,7 +15,6 @@ import ru.misis.booking.repository.jpa.JpaUserRepository
 
 @SpringBootTest
 class JpaUnitOfWorkTest {
-
     @Autowired lateinit var uow: IUnitOfWork
     @Autowired lateinit var userJpa: JpaUserRepository
     @Autowired lateinit var restaurantJpa: JpaRestaurantRepository
@@ -37,7 +36,6 @@ class JpaUnitOfWorkTest {
         assertEquals(1, userJpa.count())
     }
 
-    // Главное: при исключении внутри execute вся транзакция откатывается
     @Test
     fun `execute rolls back when exception is thrown`() {
         assertThrows<RuntimeException> {
@@ -50,7 +48,6 @@ class JpaUnitOfWorkTest {
         assertEquals(0, userJpa.count())
     }
 
-    // Атомарность: если упало в середине, откатываются все сохранения блока
     @Test
     fun `execute rolls back all saves atomically on exception`() {
         assertThrows<RuntimeException> {
@@ -64,7 +61,6 @@ class JpaUnitOfWorkTest {
         assertEquals(0, userJpa.count())
     }
 
-    // Данные, сохранённые до execute, не затрагиваются откатом
     @Test
     fun `execute rollback does not affect data saved outside transaction`() {
         userJpa.save(User("outside@mail.com", "+79001234567", "hash"))
@@ -80,7 +76,6 @@ class JpaUnitOfWorkTest {
         assertEquals("outside@mail.com", userJpa.findAll().first().email)
     }
 
-    // Каскадные изменения дочерних сущностей тоже откатываются
     @Test
     fun `execute rolls back cascaded child entities on exception`() {
         val restaurant = restaurantJpa.save(Restaurant("R", "Addr", "C"))
@@ -94,7 +89,6 @@ class JpaUnitOfWorkTest {
             }
         }
 
-        // tables — lazy collection, читаем внутри транзакции
         val tableCount = uow.executeReadOnly {
             restaurants.findById(restaurant.restaurantId)!!.tables.size
         }

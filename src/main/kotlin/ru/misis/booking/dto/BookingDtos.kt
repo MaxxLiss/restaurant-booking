@@ -8,8 +8,6 @@ import ru.misis.booking.domain.model.*
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-// ── Requests ─────────────────────────────────────────────────────────────────
-
 data class CreateBookingRequest(
     val userId: Long,
     val restaurantId: Long,
@@ -28,9 +26,6 @@ data class CreatePaymentRequest(
     @field:NotBlank val method: String
 )
 
-// ── Responses ─────────────────────────────────────────────────────────────────
-
-// POST /bookings  (no preOrder/payment — don't exist yet)
 data class CreateBookingResponse(
     val bookingId: Long,
     val userId: Long,
@@ -45,7 +40,6 @@ data class CreateBookingResponse(
     }
 }
 
-// GET /bookings/{id}  (full details with embedded summaries)
 data class BookingDetailsResponse(
     val bookingId: Long,
     val userId: Long,
@@ -69,7 +63,6 @@ data class BookingDetailsResponse(
     }
 }
 
-// Embedded in BookingDetailsResponse
 data class PreOrderSummary(val orderId: Long, val itemCount: Int, val total: BigDecimal) {
     companion object { fun from(p: PreOrder) = PreOrderSummary(p.orderId, p.items.size, p.calculateTotal()) }
 }
@@ -78,7 +71,7 @@ data class PaymentSummary(val paymentId: Long, val amount: BigDecimal, val statu
     companion object { fun from(p: Payment) = PaymentSummary(p.paymentId, p.amount, p.status) }
 }
 
-// POST /bookings/{id}/pre-order  (full items list)
+
 data class PreOrderItemLine(val itemId: Long, val dishName: String, val count: Int, val unitPrice: BigDecimal, val subtotal: BigDecimal) {
     companion object {
         fun from(i: PreOrderItem) = PreOrderItemLine(i.itemId, i.dish.name, i.count, i.unitPrice, i.getSubtotal())
@@ -91,7 +84,16 @@ data class PreOrderResponse(val orderId: Long, val items: List<PreOrderItemLine>
     }
 }
 
-// POST /bookings/{id}/payment
-data class PaymentResponse(val paymentId: Long, val amount: BigDecimal, val method: String, val status: PaymentStatus, val paidAt: LocalDateTime?) {
-    companion object { fun from(p: Payment) = PaymentResponse(p.paymentId, p.amount, p.method, p.status, p.paidAt) }
+data class PaymentResponse(
+    val paymentId: Long,
+    val amount: BigDecimal,
+    val method: String,
+    val status: PaymentStatus,
+    val paidAt: LocalDateTime?,
+    val bonusAccrued: BigDecimal = BigDecimal.ZERO
+) {
+    companion object {
+        fun from(p: Payment, bonusAccrued: BigDecimal = BigDecimal.ZERO) =
+            PaymentResponse(p.paymentId, p.amount, p.method, p.status, p.paidAt, bonusAccrued)
+    }
 }

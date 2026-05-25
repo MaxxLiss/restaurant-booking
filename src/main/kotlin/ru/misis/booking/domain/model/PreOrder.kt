@@ -6,7 +6,6 @@ import jakarta.persistence.*
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-// Total = Σ(price · count) · (1 + tip) − discount
 @Entity
 @Table(name = "pre_orders")
 class PreOrder(
@@ -49,15 +48,11 @@ class PreOrder(
         if (!removed) throw InvalidArgumentException("Позиция $itemId не найдена")
     }
 
+    // Total = Σ(price · count) · (1 + tip) − discount
     fun calculateTotal(): BigDecimal {
         val subtotal = _items.map { it.getSubtotal() }.fold(BigDecimal.ZERO, BigDecimal::add)
         val withTip = subtotal.multiply(BigDecimal.ONE.add(tip))
         return withTip.subtract(discount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP)
-    }
-
-    fun ensureNotEmpty() {
-        if (_items.isEmpty())
-            throw BusinessRuleViolationException("Предзаказ пуст — нельзя оплатить")
     }
 }
 

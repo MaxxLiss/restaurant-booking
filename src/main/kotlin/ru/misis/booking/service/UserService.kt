@@ -8,7 +8,9 @@ import ru.misis.booking.dto.*
 import ru.misis.booking.uow.IUnitOfWork
 
 @Service
-class UserService(private val uow: IUnitOfWork) {
+class UserService(
+    private val uow: IUnitOfWork
+) {
 
     fun register(request: RegisterUserRequest): RegisterResponse =
         uow.execute {

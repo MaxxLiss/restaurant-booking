@@ -14,7 +14,6 @@ import java.time.LocalDateTime
 @RestController
 @RequestMapping("/api/restaurants")
 class RestaurantController(private val restaurantService: RestaurantService) {
-
     @Operation(summary = "Создать ресторан")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

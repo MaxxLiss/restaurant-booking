@@ -19,7 +19,6 @@ import ru.misis.booking.repository.UserRepository
 
 @ExtendWith(MockitoExtension::class)
 class UserServiceTest {
-
     @Mock lateinit var restaurantRepo: RestaurantRepository
     @Mock lateinit var userRepo: UserRepository
     @Mock lateinit var bookingRepo: BookingRepository

@@ -26,12 +26,13 @@ class LoyaltyAccount(
         val BONUS_RATE: BigDecimal = BigDecimal("0.05")
     }
 
-    fun addBonus(orderTotal: BigDecimal) {
+    fun addBonus(orderTotal: BigDecimal): BigDecimal {
         if (orderTotal < BigDecimal.ZERO)
             throw InvalidArgumentException("Сумма заказа не может быть отрицательной")
         val bonus = orderTotal.multiply(BONUS_RATE).setScale(2, RoundingMode.HALF_UP)
         balance = balance.add(bonus)
         totalEarned = totalEarned.add(bonus)
+        return bonus
     }
 
     fun redeem(amount: BigDecimal): Boolean {

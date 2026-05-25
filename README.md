@@ -18,39 +18,45 @@ REST API для бронирования столиков в ресторане.
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - H2 Console: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/booking`)
 
+## Тесты
+
+```bash                                                                                                                                                                                                     
+./gradlew test
+```
+
 ## API
 
-### Users `/api/users`
+### Users
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| POST | `/register` | Зарегистрировать пользователя |
-| GET | `/{id}` | Профиль пользователя |
-| PATCH | `/{id}` | Обновить email / телефон |
-| GET | `/{id}/bookings` | История бронирований |
+| POST | `/api/users/register` | Зарегистрировать пользователя |
+| GET | `/api/users/{id}` | Профиль пользователя |
+| PATCH | `/api/users/{id}` | Обновить email / телефон |
+| GET | `/api/users/{id}/bookings` | История бронирований |
 
-### Restaurants `/api/restaurants`
+### Restaurants
 
 | Метод | Путь | Описание |
 |-------|--|----------|
-| POST |  | Создать ресторан |
-| GET |  | Список всех ресторанов |
-| GET | `/{id}` | Детали ресторана |
-| POST | `/{id}/tables` | Добавить столик |
-| GET | `/{id}/tables` | Список столиков |
-| GET | `/{id}/tables/available` | Свободные столики на интервал (`startAt`, `endAt`) |
-| GET | `/{id}/menu` | Меню ресторана |
-| POST | `/{id}/menu/dishes` | Добавить блюдо |
+| POST | `/api/restaurants` | Создать ресторан |
+| GET | `/api/restaurants` | Список всех ресторанов |
+| GET | `/api/restaurants/{id}` | Детали ресторана |
+| POST | `/api/restaurants/{id}/tables` | Добавить столик |
+| GET | `/api/restaurants/{id}/tables` | Список столиков |
+| GET | `/api/restaurants/{id}/tables/available` | Свободные столики на интервал (`startAt`, `endAt`) |
+| GET | `/api/restaurants/{id}/menu` | Меню ресторана |
+| POST | `/api/restaurants/{id}/menu/dishes` | Добавить блюдо |
 
-### Bookings `/api/bookings`
+### Bookings
 
 | Метод | Путь | Описание |
 |-------|---|----------|
-| POST |  | Создать бронирование |
-| GET | `/{id}` | Детали бронирования |
-| DELETE | `/{id}` | Отменить бронирование |
-| POST | `/{id}/pre-order` | Добавить позиции предзаказа |
-| POST | `/{id}/payment` | Оплатить бронирование |
+| POST | `/api/bookings` | Создать бронирование |
+| GET | `/api/bookings/{id}` | Детали бронирования |
+| DELETE | `/api/bookings/{id}` | Отменить бронирование |
+| POST | `/api/bookings/{id}/pre-order` | Добавить позиции предзаказа |
+| POST | `/api/bookings/{id}/payment` | Оплатить бронирование |
 
 ## Структура проекта
 
@@ -58,7 +64,10 @@ REST API для бронирования столиков в ресторане.
 src/main/kotlin/ru/misis/booking/
 ├── RestaurantBookingApplication.kt
 ├── controller/          # REST-контроллеры
-├── service/             # Бизнес-логика
+├── service/
+│   ├── BookingService.kt    # Бронирования, предзаказы, оплата + программа лояльности
+│   ├── RestaurantService.kt # Рестораны, столики, меню
+│   └── UserService.kt       # Пользователи, профиль, история броней
 ├── uow/                 # Unit of Work (IUnitOfWork, JpaUnitOfWork)
 ├── repository/
 │   ├── BookingRepository.kt     # Доменный интерфейс — используется сервисами/UoW
@@ -102,14 +111,61 @@ uow.execute {
 }
 ```
 
-## Тесты
+## Программа лояльности
 
-```bash
-./gradlew test
+При каждой оплате бронирования автоматически начисляется 5% от суммы заказа на счёт лояльности пользователя. Ответ `POST /{id}/payment` содержит поле `bonusAccrued` с суммой начисленных бонусов.
+
+```
+POST /api/bookings/{id}/payment  →  { ..., "bonusAccrued": 150.00 }
 ```
 
-| Слой | Что покрыто |
-|------|-------------|
-| Доменная модель | `Booking`, `Payment`, `PreOrder`, `Review`, `LoyaltyAccount`, `RestaurantTable`, `User` |
-| Сервисы | `BookingService`, `ReservationService`, `RestaurantService`, `UserService` |
-| UoW / транзакции | `JpaUnitOfWorkTest` — коммит, откат, атомарность, каскадный откат |
+Начисление происходит в `BookingService.processPayment`:
+1. Создаётся/загружается `LoyaltyAccount` через `user.getOrCreateLoyaltyAccount()`
+2. Вызывается `loyaltyAccount.addBonus(total)` — начисляет `total × 0.05`
+3. Пользователь сохраняется (каскадно сохраняется счёт лояльности)
+
+## Паттерны проектирования
+
+### Singleton — `LoyaltyAccount`
+
+У каждого пользователя ровно один счёт лояльности. Доменный инвариант обеспечивается методом `User.getOrCreateLoyaltyAccount()`: при повторном вызове возвращается тот же экземпляр, а не новый.
+
+```kotlin
+val account = user.getOrCreateLoyaltyAccount() // создаёт при первом вызове
+val same    = user.getOrCreateLoyaltyAccount() // возвращает тот же объект
+```
+
+### Prototype — `NotificationTemplate`
+
+`NotificationTemplate` — абстрактный класс с тремя наследниками: `EmailTemplate`, `SmsTemplate`, `PushTemplate`. Каждый хранит своё сообщение и конфигурацию канала. `NotificationService.notifyAll()` принимает список ID пользователей и один шаблон — клонирует его на каждого пользователя и возвращает готовый к отправке список.
+
+```kotlin
+val template = EmailTemplate("Ваш столик подтверждён", subjectPrefix = "Бронирование")
+val notifications = notificationService.notifyAll(listOf(1L, 2L, 3L), template)
+// → [Notification(user=1, ...), Notification(user=2, ...), Notification(user=3, ...)]
+```
+
+Сервис не знает конкретного типа шаблона — вызывает `template.clone().build(user)` через базовый тип. Добавление нового канала не затрагивает `NotificationService`.
+
+| Тип | Канал | Поведение |
+|-----|-------|-----------|
+| `EmailTemplate(subjectPrefix)` | EMAIL | Оборачивает: `[prefix] message` |
+| `SmsTemplate(maxLength)` | SMS | Обрезает до `maxLength` символов (по умолчанию 160) |
+| `PushTemplate(titleMaxLength)` | PUSH | Обрезает до `titleMaxLength` символов с `…` |
+
+### Factory Method — `Payment`
+
+Метод оплаты определяет поведение платежа. `Payment.create(amount, method)` возвращает нужный подтип:
+
+| Метод | Тип | Возврат |
+|-------|-----|---------|
+| `CARD`, `ONLINE` | `CardPayment` | поддерживается |
+| `CASH` | `CashPayment` | только вручную вне системы |
+
+```kotlin
+val payment = Payment.create(total, "CARD")   // → CardPayment
+val payment = Payment.create(total, "CASH")   // → CashPayment
+payment.process()
+```
+
+Хранятся в одной таблице (`SINGLE_TABLE` JPA-наследование), тип фиксируется в колонке `payment_type`.
