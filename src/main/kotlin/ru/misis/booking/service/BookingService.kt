@@ -3,23 +3,21 @@ package ru.misis.booking.service
 import ru.misis.booking.domain.exceptions.BusinessRuleViolationException
 import ru.misis.booking.domain.model.*
 import org.springframework.stereotype.Service
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 @Service
 class BookingService {
-
     fun createBooking(
         user: User,
         restaurant: Restaurant,
         tableId: Long,
-        date: LocalDate,
-        time: LocalTime,
+        startAt: LocalDateTime,
+        endAt: LocalDateTime,
         guests: Int
     ): Booking {
         val table = restaurant.findTable(tableId)
             ?: throw BusinessRuleViolationException("Столик $tableId не найден в ресторане")
-        return Booking(user = user, table = table, date = date, time = time, guests = guests)
+        return Booking(user = user, table = table, startAt = startAt, endAt = endAt, guests = guests)
     }
 
     fun startPreOrder(booking: Booking): PreOrder {

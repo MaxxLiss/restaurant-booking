@@ -9,7 +9,7 @@ import java.math.RoundingMode
 // Total = Σ(price · count) · (1 + tip) − discount
 @Entity
 @Table(name = "pre_orders")
-data class PreOrder(
+class PreOrder(
     @Column(nullable = false, precision = 6, scale = 4)
     var tip: BigDecimal = BigDecimal.ZERO,
     @Column(nullable = false, precision = 12, scale = 2)
@@ -63,7 +63,7 @@ data class PreOrder(
 
 @Entity
 @Table(name = "pre_order_items")
-data class PreOrderItem(
+class PreOrderItem(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "dish_id", nullable = false)
     val dish: Dish,

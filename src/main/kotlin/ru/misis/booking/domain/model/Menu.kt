@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "menus")
-data class Menu(
+class Menu(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: LocalDateTime = LocalDateTime.now(),
     @Id
@@ -38,7 +38,7 @@ data class Menu(
 
 @Entity
 @Table(name = "dishes")
-data class Dish(
+class Dish(
     @Column(nullable = false)
     val name: String,
     @Column(nullable = false, precision = 12, scale = 2)

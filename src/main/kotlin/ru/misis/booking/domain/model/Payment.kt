@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 // Переходы: PENDING → PAID → REFUNDED, либо PENDING → FAILED
 @Entity
 @Table(name = "payments")
-data class Payment(
+class Payment(
     @Column(nullable = false, precision = 12, scale = 2)
     val amount: BigDecimal,
     @Column(nullable = false)

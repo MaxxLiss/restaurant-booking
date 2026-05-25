@@ -1,14 +1,26 @@
 spring:
   application:
     name: restaurant-booking
-  # Когда понадобится БД — раскомментировать и добавить драйвер в build.gradle.kts
-  # datasource:
-  #   url: jdbc:postgresql://localhost:5432/booking
-  #   username: booking
-  #   password: booking
-  # jpa:
-  #   hibernate:
-  #     ddl-auto: update
-  #   properties:
-  #     hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
-  #     hibernate.format_sql: true
+  datasource:
+    url: jdbc:h2:file:./data/booking
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate.format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

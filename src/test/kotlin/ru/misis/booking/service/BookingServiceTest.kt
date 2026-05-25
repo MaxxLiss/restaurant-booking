@@ -5,13 +5,11 @@ import ru.misis.booking.domain.model.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class BookingServiceTest {
-
     private val service = BookingService()
 
     private fun newUser(suffix: String = "1") =
@@ -24,6 +22,9 @@ class BookingServiceTest {
         return r to t
     }
 
+    private val start = LocalDateTime.of(2026, 6, 20, 19, 0)
+    private val end   = LocalDateTime.of(2026, 6, 20, 21, 0)
+
     @Test
     fun `full scenario - book, preorder, pay, accrue bonus`() {
         val user = newUser()
@@ -33,7 +34,7 @@ class BookingServiceTest {
         val dish = Dish("Стейк", BigDecimal("2000.00"), "Main")
         restaurant.menu.addDish(dish)
 
-        val booking = Booking(user, table, LocalDate.of(2026, 6, 20), LocalTime.of(19, 0), 2)
+        val booking = Booking(user, table, start, end, 2)
         val preOrder = service.startPreOrder(booking)
         preOrder.addItem(dish, 2) // 4000
 
@@ -49,7 +50,7 @@ class BookingServiceTest {
         val user = newUser()
         val (_, table) = newRestaurantWithTable()
         val loyalty = LoyaltyAccount(user)
-        val booking = Booking(user, table, LocalDate.of(2026, 6, 20), LocalTime.of(19, 0), 2)
+        val booking = Booking(user, table, start, end, 2)
         assertThrows<BusinessRuleViolationException> {
             service.payAndAccrueBonus(booking, "CARD", loyalty)
         }
@@ -60,7 +61,7 @@ class BookingServiceTest {
         val user = newUser()
         val (_, table) = newRestaurantWithTable()
         val loyalty = LoyaltyAccount(user)
-        val booking = Booking(user, table, LocalDate.of(2026, 6, 20), LocalTime.of(19, 0), 2)
+        val booking = Booking(user, table, start, end, 2)
         service.startPreOrder(booking)
         assertThrows<BusinessRuleViolationException> {
             service.payAndAccrueBonus(booking, "CARD", loyalty)

@@ -6,23 +6,21 @@ import ru.misis.booking.domain.enums.PaymentStatus
 import ru.misis.booking.domain.exceptions.BusinessRuleViolationException
 import java.math.BigDecimal
 import java.time.Duration
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 
 @Entity
 @Table(name = "bookings")
-data class Booking(
+class Booking(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     val user: User,
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "table_id", nullable = false)
     val table: RestaurantTable,
-    @Column(nullable = false)
-    val date: LocalDate,
-    @Column(nullable = false)
-    val time: LocalTime,
+    @Column(name = "start_at", nullable = false)
+    val startAt: LocalDateTime,
+    @Column(name = "end_at", nullable = false)
+    val endAt: LocalDateTime,
     @Column(nullable = false)
     val guests: Int,
     @Column(name = "created_at", nullable = false)
@@ -43,6 +41,7 @@ data class Booking(
 ) {
     init {
         require(guests > 0) { "Количество гостей должно быть положительным" }
+        require(endAt.isAfter(startAt)) { "Время окончания должно быть позже времени начала" }
         table.registerBooking(this)
         user.addBooking(this)
     }
@@ -62,8 +61,7 @@ data class Booking(
 
     fun expireIfNoShow(now: LocalDateTime = LocalDateTime.now()) {
         if (status != BookingStatus.CONFIRMED) return
-        val bookingStart = LocalDateTime.of(date, time)
-        if (Duration.between(bookingStart, now).toMinutes() >= 15) {
+        if (Duration.between(startAt, now).toMinutes() >= 15) {
             status = BookingStatus.EXPIRED
             table.releaseBooking(this)
         }

@@ -1,59 +1,77 @@
-# Лабораторная работа №4 — Реализация доменной модели
+# Restaurant Booking
 
-Скелет Spring Boot приложения на Kotlin. Доменные классы аннотированы JPA —
-схему БД можно получить генерацией Hibernate (`ddl-auto: update`) или
-извлечь как SQL-скрипт. Сам датасорс пока не подключён.
+REST API для бронирования столиков в ресторане. Spring Boot + Kotlin + H2.
+
+## Стек
+
+- Kotlin 1.9 / JVM 17
+- Spring Boot 3.3 (Web, Data JPA, Validation)
+- H2 (файловая БД, `./data/booking`)
+- Springdoc OpenAPI (Swagger UI)
 
 ## Запуск
 
 ```bash
-./gradlew bootRun     # запуск приложения (без БД)
-./gradlew test        # юнит-тесты доменной модели
+./gradlew bootRun
 ```
 
-## Структура
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- H2 Console: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/booking`)
+
+## API
+
+### Users `/api/users`
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/register` | Зарегистрировать пользователя |
+| GET | `/{id}` | Профиль пользователя |
+| PATCH | `/{id}` | Обновить email / телефон |
+| GET | `/{id}/bookings` | История бронирований |
+
+### Restaurants `/api/restaurants`
+
+| Метод | Путь | Описание |
+|-------|--|----------|
+| POST |  | Создать ресторан |
+| GET |  | Список всех ресторанов |
+| GET | `/{id}` | Детали ресторана |
+| POST | `/{id}/tables` | Добавить столик |
+| GET | `/{id}/tables` | Список столиков |
+| GET | `/{id}/tables/available` | Свободные столики на интервал (`startAt`, `endAt`) |
+| GET | `/{id}/menu` | Меню ресторана |
+| POST | `/{id}/menu/dishes` | Добавить блюдо |
+
+### Bookings `/api/bookings`
+
+| Метод | Путь | Описание |
+|-------|---|----------|
+| POST |  | Создать бронирование |
+| GET | `/{id}` | Детали бронирования |
+| DELETE | `/{id}` | Отменить бронирование |
+| POST | `/{id}/pre-order` | Добавить позиции предзаказа |
+| POST | `/{id}/payment` | Оплатить бронирование |
+
+## Структура проекта
 
 ```
-src/main/kotlin/com/misis/booking/
+src/main/kotlin/ru/misis/booking/
 ├── RestaurantBookingApplication.kt
+├── controller/          # REST-контроллеры
+├── service/             # Бизнес-логика
+├── repository/          # JPA-репозитории
+├── dto/                 # Request/Response объекты
 ├── domain/
-│   ├── enums/Enums.kt
-│   ├── exceptions/DomainException.kt
-│   └── model/
-│       ├── User.kt
-│       ├── Restaurant.kt
-│       ├── RestaurantTable.kt   (имя класса не конфликтует с jakarta.persistence.Table)
-│       ├── Menu.kt              (Menu + Dish)
-│       ├── Booking.kt
-│       ├── PreOrder.kt          (PreOrder + PreOrderItem)
-│       ├── Payment.kt
-│       ├── LoyaltyAccount.kt
-│       ├── Notification.kt
-│       └── Review.kt
-└── service/BookingService.kt
+│   ├── model/           # JPA-сущности (User, Restaurant, Booking, ...)
+│   ├── enums/           # Перечисления статусов
+│   └── exceptions/      # Доменные исключения
+└── exception/           # GlobalExceptionHandler
 ```
 
-## Принципы реализации
+## Тесты
 
-- «Толстая модель»: бизнес-правила в сущностях, сервис только оркеструет.
-- Инкапсуляция: все изменяемые поля имеют `protected set` (нужен Hibernate
-  для рефлексивной записи), изменения извне — только через методы класса.
-- Инварианты — в `init {}` и проверках внутри методов.
-- Переходы состояний (`Booking`, `Payment`) проверяются перед изменением статуса.
-- Коллекции наружу возвращаются защитными копиями (`toList()`).
-- Связи: `Restaurant` 1↔* `RestaurantTable`, `User` 1↔* `Booking`,
-  `Booking` 1↔0..1 `PreOrder` 1↔* `PreOrderItem`, `Booking` 1↔0..1 `Payment`,
-  `Restaurant` 1↔1 `Menu` 1↔* `Dish`, `User` 1↔1 `LoyaltyAccount`.
+```bash
+./gradlew test
+```
 
-## Подключение БД (когда понадобится)
-
-1. Добавить драйвер в `build.gradle.kts`, например:
-   ```kotlin
-   runtimeOnly("org.postgresql:postgresql")
-   ```
-2. Раскомментировать секцию `datasource`/`jpa` в `application.yml`.
-3. Убрать `exclude = [...]` из `@SpringBootApplication`.
-4. Добавить интерфейсы-репозитории, например:
-   ```kotlin
-   interface BookingRepository : JpaRepository<Booking, Long>
-   ```
+Покрыты юнит-тестами: доменная модель (`Booking`, `Payment`, `PreOrder`, `Review`, ...) и сервисы (`BookingService`, `ReservationService`, `RestaurantService`, `UserService`).

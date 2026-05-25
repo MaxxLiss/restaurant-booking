@@ -9,7 +9,7 @@ import java.math.RoundingMode
 // Bonus = Total · 0.05
 @Entity
 @Table(name = "loyalty_accounts")
-data class LoyaltyAccount(
+class LoyaltyAccount(
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     val user: User,

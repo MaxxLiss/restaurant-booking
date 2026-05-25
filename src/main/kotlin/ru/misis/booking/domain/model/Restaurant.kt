@@ -1,12 +1,11 @@
 package ru.misis.booking.domain.model
 
 import jakarta.persistence.*
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "restaurants")
-data class Restaurant(
+class Restaurant(
     @Column(nullable = false)
     val name: String,
     @Column(nullable = false)
@@ -25,7 +24,7 @@ data class Restaurant(
 
     @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
     @JoinColumn(name = "menu_id")
-    val menu: Menu = Menu()
+    var menu: Menu = Menu()
 
     val tables: List<RestaurantTable> get() = _tables
 
@@ -42,8 +41,8 @@ data class Restaurant(
         _tables.add(table)
     }
 
-    fun getAvailableTables(date: LocalDate, time: LocalTime): List<RestaurantTable> =
-        _tables.filter { it.isAvailable(date, time) }
+    fun getAvailableTables(startAt: LocalDateTime, endAt: LocalDateTime): List<RestaurantTable> =
+        _tables.filter { it.isAvailable(startAt, endAt) }
 
     fun matchesName(query: String): Boolean =
         name.contains(query, ignoreCase = true) || address.contains(query, ignoreCase = true)

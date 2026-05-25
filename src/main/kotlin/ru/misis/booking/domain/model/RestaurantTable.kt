@@ -4,12 +4,11 @@ import ru.misis.booking.domain.enums.BookingStatus
 import ru.misis.booking.domain.enums.TableStatus
 import ru.misis.booking.domain.exceptions.BusinessRuleViolationException
 import jakarta.persistence.*
-import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 @Entity
-@Table(name = "tables")
-data class RestaurantTable(
+@Table(name = "restaurant_tables")
+class RestaurantTable(
     @Column(nullable = false)
     val capacity: Int,
     @Column(name = "pos_x", nullable = false)
@@ -36,9 +35,11 @@ data class RestaurantTable(
 
     internal fun assignTo(restaurant: Restaurant) { this.restaurant = restaurant }
 
-    fun isAvailable(date: LocalDate, time: LocalTime): Boolean {
+    fun isAvailable(startAt: LocalDateTime, endAt: LocalDateTime): Boolean {
         if (status == TableStatus.BUSY) return false
-        return _bookings.none { b -> b.status == BookingStatus.CONFIRMED && b.date == date && b.time == time }
+        return _bookings.none { b ->
+            b.status == BookingStatus.CONFIRMED && b.startAt.isBefore(endAt) && b.endAt.isAfter(startAt)
+        }
     }
 
     internal fun registerBooking(booking: Booking) {
@@ -46,9 +47,9 @@ data class RestaurantTable(
             throw BusinessRuleViolationException(
                 "Количество гостей (${booking.guests}) превышает вместимость столика ($capacity)"
             )
-        if (!isAvailable(booking.date, booking.time))
+        if (!isAvailable(booking.startAt, booking.endAt))
             throw BusinessRuleViolationException(
-                "Столик $tableId уже занят на ${booking.date} ${booking.time}"
+                "Столик $tableId уже занят на ${booking.startAt} — ${booking.endAt}"
             )
         _bookings.add(booking)
     }
