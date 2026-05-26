@@ -1,14 +1,13 @@
 package ru.misis.booking.notification
 
 import ru.misis.booking.domain.enums.Channel
-import ru.misis.booking.domain.model.Notification
 import ru.misis.booking.domain.model.User
 
 abstract class NotificationTemplate(val rawMessage: String) {
     abstract val channel: Channel
 
     abstract fun copy(): NotificationTemplate
-    abstract fun build(user: User): Notification
+    abstract fun createNotification(user: User): Notification
 }
 
 class EmailTemplate(
@@ -17,7 +16,7 @@ class EmailTemplate(
 ) : NotificationTemplate(rawMessage) {
     override val channel = Channel.EMAIL
 
-    override fun build(user: User) =
+    override fun createNotification(user: User) =
         Notification(user = user, message = "[$subjectPrefix] $rawMessage", channel = channel)
 
     override fun copy() = EmailTemplate(rawMessage, subjectPrefix)
@@ -29,7 +28,7 @@ class SmsTemplate(
 ) : NotificationTemplate(rawMessage) {
     override val channel = Channel.SMS
 
-    override fun build(user: User) =
+    override fun createNotification(user: User) =
         Notification(user = user, message = rawMessage.take(maxLength), channel = channel)
 
     override fun copy() = SmsTemplate(rawMessage, maxLength)
@@ -41,7 +40,7 @@ class PushTemplate(
 ) : NotificationTemplate(rawMessage) {
     override val channel = Channel.PUSH
 
-    override fun build(user: User): Notification {
+    override fun createNotification(user: User): Notification {
         val message = if (rawMessage.length > titleMaxLength)
             rawMessage.take(titleMaxLength).trimEnd() + "…"
         else

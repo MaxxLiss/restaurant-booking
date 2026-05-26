@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service
 import ru.misis.booking.domain.exceptions.EntityNotFoundException
 import ru.misis.booking.domain.model.Dish
 import ru.misis.booking.domain.model.Restaurant
+import ru.misis.booking.domain.model.RestaurantSearchFilter
 import ru.misis.booking.domain.model.RestaurantTable
 import ru.misis.booking.dto.*
 import ru.misis.booking.uow.IUnitOfWork
@@ -20,10 +21,16 @@ class RestaurantService(
             CreateRestaurantResponse.from(restaurants.save(restaurant))
         }
 
-    fun getAllRestaurants(): List<RestaurantSummaryResponse> =
-        uow.executeReadOnly {
-            restaurants.findAll().map { RestaurantSummaryResponse.from(it) }
+    fun getAllRestaurants(name: String? = null, cuisine: String? = null, minRating: Float? = null): List<RestaurantSummaryResponse> {
+        val filter = RestaurantSearchFilter.Builder().apply {
+            name?.let { nameLike(it) }
+            cuisine?.let { cuisine(it) }
+            minRating?.let { minRating(it) }
+        }.build()
+        return uow.executeReadOnly {
+            restaurants.findAll().filter { filter.matches(it) }.map { RestaurantSummaryResponse.from(it) }
         }
+    }
 
     fun getRestaurant(id: Long): RestaurantDetailsResponse =
         uow.executeReadOnly {

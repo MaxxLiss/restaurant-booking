@@ -82,7 +82,7 @@ src/main/kotlin/ru/misis/booking/
 │       └── UserRepositoryAdapter.kt
 ├── dto/                 # Request/Response объекты
 ├── domain/
-│   ├── model/           # JPA-сущности (User, Restaurant, Booking, ...)
+│   ├── model/           # Доменные модели: JPA-сущности и чистые объекты (RestaurantSearchFilter, ...)
 │   ├── enums/           # Перечисления статусов
 │   └── exceptions/      # Доменные исключения
 └── exception/           # GlobalExceptionHandler
@@ -135,9 +135,13 @@ val account = user.getOrCreateLoyaltyAccount() // создаёт при перв
 val same    = user.getOrCreateLoyaltyAccount() // возвращает тот же объект
 ```
 
-### Prototype — `NotificationTemplate`
+### Prototype + Abstract Factory — `NotificationTemplate`
 
-`NotificationTemplate` — абстрактный класс с тремя наследниками: `EmailTemplate`, `SmsTemplate`, `PushTemplate`. Каждый хранит своё сообщение и конфигурацию канала. `NotificationService.notifyAll()` принимает список ID пользователей и один шаблон — клонирует его на каждого пользователя и возвращает готовый к отправке список.
+`NotificationTemplate` совмещает два паттерна.
+
+**Prototype** — абстрактный класс с тремя наследниками: `EmailTemplate`, `SmsTemplate`, `PushTemplate`. `NotificationService.notifyAll()` принимает один шаблон и список ID пользователей — клонирует шаблон (`copy()`) на каждого пользователя, чтобы изменения конфигурации одного экземпляра не влияли на остальных.
+
+**Abstract Factory** — абстрактный метод `createNotification(user)` инкапсулирует логику создания `Notification`. Каждый подкласс знает, как именно собрать объект-уведомление для своего канала: добавить subject-prefix, обрезать текст и т.д. `NotificationService` работает только с базовым типом и не знает деталей создания.
 
 ```kotlin
 val template = EmailTemplate("Ваш столик подтверждён", subjectPrefix = "Бронирование")
@@ -145,13 +149,35 @@ val notifications = notificationService.notifyAll(listOf(1L, 2L, 3L), template)
 // → [Notification(user=1, ...), Notification(user=2, ...), Notification(user=3, ...)]
 ```
 
-Сервис не знает конкретного типа шаблона — вызывает `template.clone().build(user)` через базовый тип. Добавление нового канала не затрагивает `NotificationService`.
+Сервис вызывает `template.copy().createNotification(user)` через базовый тип. Добавление нового канала не затрагивает `NotificationService`.
 
-| Тип | Канал | Поведение |
-|-----|-------|-----------|
+| Тип | Канал | Поведение `createNotification` |
+|-----|-------|--------------------------------|
 | `EmailTemplate(subjectPrefix)` | EMAIL | Оборачивает: `[prefix] message` |
 | `SmsTemplate(maxLength)` | SMS | Обрезает до `maxLength` символов (по умолчанию 160) |
 | `PushTemplate(titleMaxLength)` | PUSH | Обрезает до `titleMaxLength` символов с `…` |
+
+### Builder — `RestaurantSearchFilter`
+
+`RestaurantSearchFilter` строится через вложенный класс `Builder`. Все параметры опциональны: при вызове `build()` без настроек фильтр пропускает все рестораны.
+
+```kotlin
+val filter = RestaurantSearchFilter.Builder()
+    .nameLike("Рим")
+    .cuisine("Итальянская")
+    .minRating(4.0f)
+    .build()
+
+val restaurants = restaurantService.getAllRestaurants(filter)
+```
+
+В контроллере `GET /api/restaurants` принимает query-параметры `name`, `cuisine`, `minRating` и строит фильтр через Builder перед передачей в сервис. Если параметры не переданы — возвращаются все рестораны.
+
+| Метод Builder | Критерий |
+|---------------|----------|
+| `nameLike(name)` | Подстрока в названии или адресе (без учёта регистра) |
+| `cuisine(cuisine)` | Точное совпадение типа кухни (без учёта регистра) |
+| `minRating(rating)` | Рейтинг `>= rating`; допустимые значения: 0..5 |
 
 ### Factory Method — `Payment`
 

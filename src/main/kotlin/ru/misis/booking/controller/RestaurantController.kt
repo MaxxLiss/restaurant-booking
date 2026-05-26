@@ -22,7 +22,12 @@ class RestaurantController(private val restaurantService: RestaurantService) {
 
     @Operation(summary = "Список всех ресторанов")
     @GetMapping
-    fun getAll(): List<RestaurantSummaryResponse> = restaurantService.getAllRestaurants()
+    fun getAll(
+        @RequestParam(required = false) name: String?,
+        @RequestParam(required = false) cuisine: String?,
+        @RequestParam(required = false) minRating: Float?
+    ): List<RestaurantSummaryResponse> =
+        restaurantService.getAllRestaurants(name, cuisine, minRating)
 
     @Operation(summary = "Получить ресторан по ID")
     @GetMapping("/{id}")

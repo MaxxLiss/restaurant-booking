@@ -1,10 +1,8 @@
 package ru.misis.booking.notification
 
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import ru.misis.booking.domain.enums.Channel
 import ru.misis.booking.domain.model.User
-import java.math.BigDecimal
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
@@ -18,7 +16,7 @@ class NotificationTemplateTest {
     @Test
     fun `EmailTemplate wraps message with subject prefix`() {
         val template = EmailTemplate("Столик подтверждён", subjectPrefix = "Бронирование")
-        val notification = template.build(user())
+        val notification = template.createNotification(user())
         assertEquals("[Бронирование] Столик подтверждён", notification.message)
         assertEquals(Channel.EMAIL, notification.channel)
     }
@@ -37,14 +35,14 @@ class NotificationTemplateTest {
     @Test
     fun `SmsTemplate passes message unchanged when within limit`() {
         val template = SmsTemplate("Короткое сообщение", maxLength = 160)
-        assertEquals("Короткое сообщение", template.build(user()).message)
+        assertEquals("Короткое сообщение", template.createNotification(user()).message)
     }
 
     @Test
     fun `SmsTemplate truncates message to maxLength`() {
         val long = "А".repeat(200)
         val template = SmsTemplate(long, maxLength = 160)
-        val notification = template.build(user())
+        val notification = template.createNotification(user())
         assertEquals(160, notification.message.length)
     }
 
@@ -61,14 +59,14 @@ class NotificationTemplateTest {
     @Test
     fun `PushTemplate passes short message unchanged`() {
         val template = PushTemplate("Коротко", titleMaxLength = 50)
-        assertEquals("Коротко", template.build(user()).message)
+        assertEquals("Коротко", template.createNotification(user()).message)
     }
 
     @Test
     fun `PushTemplate truncates long message with ellipsis`() {
         val long = "А".repeat(100)
         val template = PushTemplate(long, titleMaxLength = 50)
-        val message = template.build(user()).message
+        val message = template.createNotification(user()).message
         assertTrue(message.endsWith("…"))
         assertTrue(message.length <= 51)
     }
@@ -106,7 +104,7 @@ class NotificationTemplateTest {
         )
         templates.forEach { template ->
             assertNotSame(template, template.copy())
-            assertEquals(u, template.build(u).user)
+            assertEquals(u, template.createNotification(u).user)
         }
     }
 }
